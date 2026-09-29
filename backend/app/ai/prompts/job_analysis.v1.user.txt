@@ -1,0 +1,7 @@
+Job title: $title
+Company: $company
+Location: $location
+
+<job_posting>
+$description
+</job_posting>

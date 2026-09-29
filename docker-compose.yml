@@ -1,0 +1,152 @@
+# Local development stack:  docker compose up --build
+# App: http://localhost:3000   API docs: http://localhost:8000/docs
+#
+# Every secret below has a DEV-ONLY fallback so the stack starts without a .env.
+# Put real values in .env (see .env.example); never use these defaults in production.
+#
+# Phase 6 adds the browser-worker service.
+
+x-backend: &backend
+  build:
+    context: ./backend
+  image: job-agent-backend:dev
+  env_file:
+    - path: .env
+      required: false
+  environment: &backend-env
+    ENVIRONMENT: ${ENVIRONMENT:-local}
+    LOG_JSON: ${LOG_JSON:-true}
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-jobagent}:${POSTGRES_PASSWORD:-jobagent}@postgres:5432/${POSTGRES_DB:-jobagent}
+    REDIS_URL: redis://redis:6379/0
+    SECRET_KEY: ${SECRET_KEY:-dev-only-secret-key-change-me-0000000000}
+    JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-000000000}
+    # Dev-only Fernet key. Generate your own:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    ENCRYPTION_KEYS: ${ENCRYPTION_KEYS:-ZGV2LW9ubHktZmVybmV0LWtleS1jaGFuZ2UtbWUtMDA=}
+    FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    # Local dev: the app may be opened as localhost or 127.0.0.1.
+    CORS_ORIGINS: ${CORS_ORIGINS:-http://127.0.0.1:3000}
+    # AI (resume parsing). Set LLM_PROVIDER=anthropic|openai|local and LLM_API_KEY in .env.
+    LLM_PROVIDER: ${LLM_PROVIDER:-none}
+    LLM_API_KEY: ${LLM_API_KEY:-}
+    LLM_MODEL: ${LLM_MODEL:-}
+    LLM_BASE_URL: ${LLM_BASE_URL:-}
+    # Uploaded files (encrypted). Shared by api (writes) and worker (parses).
+    STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+    STORAGE_LOCAL_PATH: /app/data/uploads
+  volumes:
+    - uploads:/app/data/uploads
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobagent}
+      POSTGRES_DB: ${POSTGRES_DB:-jobagent}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app inspect ping -d celery@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 20s
+
+  beat:
+    <<: *backend
+    command:
+      ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=INFO",
+       "--schedule=/tmp/celerybeat-schedule"]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Inlined into the browser bundle; must be same-site with FRONTEND_URL.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+    image: job-agent-frontend:dev
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/login').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  uploads:

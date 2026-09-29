@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+/* Design tokens. Components use the semantic names (bg-surface, text-muted, …),
+   never raw palette colours, so light and dark themes stay in sync. */
+:root {
+  --canvas: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --line: #e2e5eb;
+  --line-strong: #cdd2db;
+  --fg: #111827;
+  --muted: #5b6474;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --on-primary: #ffffff;
+  --primary-soft: #eef2ff;
+  --danger: #c81e1e;
+  --danger-soft: #fdf2f2;
+  --success: #15803d;
+  --success-soft: #effaf3;
+  --warning: #a15c07;
+  --warning-soft: #fdf8ec;
+  --ring: rgb(79 70 229 / 0.35);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0d1017;
+    --surface: #151922;
+    --surface-2: #1c212c;
+    --line: #2a303c;
+    --line-strong: #3a4250;
+    --fg: #e8ebf0;
+    --muted: #9aa3b2;
+    --primary: #818cf8;
+    --primary-hover: #a5b4fc;
+    --on-primary: #0d1017;
+    --primary-soft: #1f2340;
+    --danger: #f87171;
+    --danger-soft: #2a1718;
+    --success: #4ade80;
+    --success-soft: #13251a;
+    --warning: #fbbf24;
+    --warning-soft: #2a2213;
+    --ring: rgb(129 140 248 / 0.45);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@theme {
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-marquee: marquee 45s linear infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+}
+
+body {
+  background: var(--canvas);
+  color: var(--fg);
+}
+
+/* ==========================================================================
+   Landing page. It has its own vivid night theme: the tokens are redefined,
+   so shared components (buttons, brand, cards) pick it up automatically.
+   ========================================================================== */
+
+.landing {
+  --canvas: #07031a;
+  --surface: rgb(255 255 255 / 0.055);
+  --surface-2: rgb(255 255 255 / 0.1);
+  --line: rgb(255 255 255 / 0.1);
+  --line-strong: rgb(255 255 255 / 0.2);
+  --fg: #f7f5ff;
+  --muted: #bdb6e0;
+  --primary: #b26bff;
+  --primary-hover: #c99bff;
+  --on-primary: #ffffff;
+  --primary-soft: rgb(178 107 255 / 0.16);
+  --success: #3ee6a8;
+  --success-soft: rgb(62 230 168 / 0.12);
+  --warning: #ffb547;
+  --warning-soft: rgb(255 181 71 / 0.12);
+  --danger: #ff6b8b;
+  --danger-soft: rgb(255 107 139 / 0.12);
+  --ring: rgb(178 107 255 / 0.5);
+  --grad: linear-gradient(110deg, #8b5cf6 0%, #ec4899 48%, #fb923c 100%);
+  --grad-cool: linear-gradient(110deg, #22d3ee 0%, #8b5cf6 55%, #ec4899 100%);
+  color-scheme: dark;
+  background: var(--canvas);
+  color: var(--fg);
+}
+
+/* Animated gradient text */
+.text-grad {
+  background-image: var(--grad);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: grad-shift 8s linear infinite;
+}
+
+/* Gradient button with a soft glow (layered on top of the primary Button). */
+.btn-glow {
+  background-image: var(--grad);
+  background-size: 160% auto;
+  box-shadow:
+    0 10px 40px -12px rgb(236 72 153 / 0.7),
+    inset 0 1px 0 rgb(255 255 255 / 0.25);
+  transition:
+    background-position 0.5s,
+    box-shadow 0.3s,
+    transform 0.2s;
+}
+.btn-glow:hover {
+  background-position: 100% 0;
+  box-shadow:
+    0 14px 50px -10px rgb(236 72 153 / 0.9),
+    inset 0 1px 0 rgb(255 255 255 / 0.3);
+  transform: translateY(-1px);
+}
+
+.badge-grad {
+  background-image: var(--grad);
+  color: #fff;
+  box-shadow: 0 8px 24px -8px rgb(236 72 153 / 0.6);
+}
+
+/* Frosted glass panels */
+.glass {
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03));
+  border: 1px solid rgb(255 255 255 / 0.11);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 20px 60px -30px rgb(0 0 0 / 0.8);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Aurora blobs behind everything */
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.55;
+  animation: aurora 22s ease-in-out infinite alternate;
+}
+
+@keyframes grad-shift {
+  to {
+    background-position: 200% center;
+  }
+}
+@keyframes aurora {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8vw, -6vh, 0) scale(1.15);
+  }
+  100% {
+    transform: translate3d(-6vw, 8vh, 0) scale(0.95);
+  }
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Scroll reveal: only hidden once JS is ready (content never depends on JS). */
+[data-reveal] {
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 1s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: calc(var(--i, 0) * 90ms);
+}
+.fx-ready [data-reveal]:not([data-visible]) {
+  opacity: 0;
+  transform: perspective(900px) translateY(56px) rotateX(18deg) scale(0.96);
+  /* Invisible, so not interactive. This also matters for correctness: a perspective-
+     rotated wrapper around a nested 3D context (TiltCard) can project a page-sized hit
+     area in Chromium and swallow clicks meant for content far above it. */
+  pointer-events: none;
+}
+
+/* 3D pipeline ring */
+.ring-card {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-ready [data-reveal]:not([data-visible]) {
+    transform: none;
+  }
+  .text-grad,
+  .aurora-blob,
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* A grid floor receding into the distance behind the 3D hero. */
+.grid-floor {
+  background-image:
+    linear-gradient(var(--line-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-strong) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center top;
+  transform: perspective(700px) rotateX(64deg);
+  transform-origin: center top;
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, black 20%, transparent 75%);
+  opacity: 0.45;
+}

@@ -1,0 +1,7 @@
+# The landing page is public; the signed-in app is not for search engines.
+User-agent: *
+Allow: /$
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /settings
+Disallow: /onboarding
