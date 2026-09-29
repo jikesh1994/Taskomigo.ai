@@ -135,6 +135,30 @@
 * **Server-side refusal fallback** is enabled for Anthropic (`fallbacks: "default"`).
   A refused request is reported to the user as "declined", never retried blindly.
 
+### Job search (Phase 4)
+* **Only public job-board APIs** (Greenhouse Job Board API, Lever Postings API) are
+  called, with plain `GET`s and an identifying `User-Agent`. Nothing about the user is
+  sent to them. Sites whose terms forbid automated access or that need the user's login
+  (LinkedIn, Naukri, ...) are not searched.
+* **No third-party passwords, ever.** Taskomigo doesn't accept or store LinkedIn,
+  Naukri or other site credentials. Where a later phase needs a site session, the user
+  signs in themselves in a browser window the agent opens, and only an encrypted
+  session reference is kept (Phase 6).
+* **SSRF-safe sources:** a source is reduced to a `(platform, board token)` pair checked
+  against a strict pattern, and requests only go to the configured platform API base URL.
+  A pasted URL is never fetched as-is.
+* **Bounded fetching:** per-request timeout, 30 MB response cap, a concurrency limit per
+  search, at most 50 boards per user, and one running search per user.
+* **Job text is untrusted:** descriptions are converted from HTML to plain text on the
+  server (scripts and styles dropped) and rendered as text, never as HTML. For AI
+  analysis the posting is wrapped in `<job_posting>` tags as data, and every "explicit"
+  item must quote the posting or it's downgraded to "inferred" (`app/ai/jobs/analyzer.py`).
+* **Tenant isolation:** jobs are shared public data, but a user can only open jobs they
+  have a match for, and sources, matches and search runs are owner-scoped (`404`
+  otherwise).
+* **Scores are explanations, not predictions.** The UI and API describe match scores as
+  fit with the user's own criteria, never as the chance of an interview or offer.
+
 ## Secret management
 
 * Local: `.env`, which is git-ignored. `.env.example` holds no values.

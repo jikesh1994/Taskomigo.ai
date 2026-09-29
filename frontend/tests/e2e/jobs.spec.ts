@@ -7,10 +7,14 @@ import { registerUser } from "./support/helpers";
 test("follow job boards, search, triage matches and analyse a job", async ({ page }) => {
   await registerUser(page);
   await page.goto("/profile");
-  await page.getByLabel("Skill", { exact: true }).fill("Python");
-  await page.getByRole("form", { name: "Add a skill" }).getByLabel("Years").fill("6");
-  await page.getByRole("button", { name: "Add skill" }).click();
-  await expect(page.getByRole("list", { name: "Your skills" })).toContainText("6 years");
+  // Enough of the backend job's requirements to clear the default minimum score (60).
+  const skills = page.getByRole("list", { name: "Your skills" });
+  for (const [skill, years] of [["Python", "6"], ["PostgreSQL", "4"], ["Docker", "3"]]) {
+    await page.getByLabel("Skill", { exact: true }).fill(skill);
+    await page.getByRole("form", { name: "Add a skill" }).getByLabel("Years").fill(years);
+    await page.getByRole("button", { name: "Add skill" }).click();
+    await expect(skills).toContainText(skill);
+  }
 
   await page.getByRole("link", { name: "Jobs" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Jobs" })).toBeVisible();

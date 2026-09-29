@@ -133,6 +133,47 @@ browser polls GET /resumes ─▶ GET /resumes/{id}/review ─▶ POST decisions
 * **Review items** have stable content-derived IDs. Decisions are stored on the resume,
   so answered items don't come back, and a fresh parse resets them.
 
+## Job search and matching (Phase 4)
+
+```
+browser ─POST /job-sources {url}─▶ parse_source → (platform, board) → provider.company_name (validates live)
+browser ─POST /jobs/search──────▶ search_runs row (queued) ─▶ Celery "jobs.search" ─▶ worker:
+          for each enabled source, concurrently (semaphore):
+              provider.search(board) → [NormalizedJob]          app/jobs/providers (greenhouse | lever)
+          per board, as results arrive:
+              upsert jobs by (platform, external_id); content changed → extract_facts()
+              postings missing from the board → is_active=false (closed)
+          JobMatchService.match_jobs(user, open jobs from their boards):
+              one job per dedupe key (company|title|location) → match_job() → job_matches
+browser polls GET /jobs/search/latest ─▶ GET /jobs?tab=matches ─▶ GET /jobs/{id}
+          optional: POST /jobs/{id}/analyze ─▶ "jobs.analyze" ─▶ JobAnalyzer (LLM) → grounded → jobs.analysis
+```
+
+* **`JobSearchProvider`** (`app/jobs/providers/base.py`) is the only contract a platform
+  implements: `supports(source)`, `search(board)`, `get_job`, `normalize_job`,
+  `company_name`. Every adapter returns the same `NormalizedJob`. Adding a platform means
+  one module plus a line in `registry.py`.
+* **`jobs` are shared** across users (one row per posting). Facts, the content hash and
+  any AI analysis are computed once per posting, not once per user. `job_matches` hold
+  each user's scores and their saved/skipped status, which survives re-searches.
+* **Deterministic facts** (`app/jobs/extract.py`): required vs preferred skills by section,
+  minimum years, workplace, salary (structured first, then text; `LPA` for India),
+  sponsorship and employment type. Each fact keeps the line it came from; anything not
+  found stays `null` ("unknown"), never guessed. `EXTRACTOR_VERSION` makes a rules change
+  refresh stored facts on the next search without touching AI analyses.
+* **Matching** (`app/jobs/matching.py`, no AI): six components (skills 40, experience 20,
+  location 10, salary 10, preferences 10, other 10 by default; per-user
+  `match_weights`), each producing reasons, missing requirements, concerns and neutral
+  notes. Hard filters (excluded company or industry, unrelated title, remote-only,
+  minimum salary, employment type, sponsorship) hide a job with the reason shown. Jobs
+  below `min_match_score` go to the Hidden tab. Profile skills are canonicalised
+  ("postgres" → PostgreSQL) and work-history technologies count too.
+* **Resume recommendation:** the parsed resume covering most of the job's skills (the
+  default wins ties).
+* **AI analysis** is optional and on demand. It uses prompt `job_analysis@v1` and a flat
+  schema, is cached per job and invalidated when the posting changes, and every item is
+  labelled explicit, inferred or unknown.
+
 ## Security model (Phase 1 parts)
 
 | Concern | Implementation |

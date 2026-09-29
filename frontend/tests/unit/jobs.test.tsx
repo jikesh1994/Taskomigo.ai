@@ -70,7 +70,7 @@ function detail(overrides: Partial<JobDetail> = {}): JobDetail {
       preferred_skills: ["Kafka"],
       skill_evidence: {},
       min_years: 5,
-      years_evidence: "5+ years of experience building backend systems",
+      years_evidence: "• 5+ years of experience building backend systems",
       workplace: "remote",
       workplace_evidence: null,
       salary_min: 3_000_000,

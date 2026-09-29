@@ -219,12 +219,15 @@ function ResumeCard({ job }: { job: JobDetail }) {
   );
 }
 
+/** A quoted line from the posting, without the list bullet it came with. */
+const quote = (text: string) => `“${text.replace(/^[\s•*·–-]+/, "")}”`;
+
 function Fact({ label, value, evidence }: { label: string; value: ReactNode; evidence?: string | null }) {
   return (
     <div className="py-2">
       <dt className="text-xs text-muted">{label}</dt>
       <dd className="font-medium">{value}</dd>
-      {evidence && <dd className="mt-0.5 text-xs text-muted italic">“{evidence}”</dd>}
+      {evidence && <dd className="mt-0.5 text-xs text-muted italic">{quote(evidence)}</dd>}
     </div>
   );
 }
@@ -349,7 +352,7 @@ function AnalysisCard({ job }: { job: JobDetail }) {
                         </span>
                         <BasisTag basis={r.basis} />
                       </div>
-                      {r.evidence && <p className="mt-0.5 text-xs text-muted italic">“{r.evidence}”</p>}
+                      {r.evidence && <p className="mt-0.5 text-xs text-muted italic">{quote(r.evidence)}</p>}
                     </li>
                   ))}
                 </ul>

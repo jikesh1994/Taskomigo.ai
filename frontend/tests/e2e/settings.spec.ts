@@ -32,7 +32,7 @@ test("platform limits from the API are shown on the field", async ({ page }) => 
   // The backend caps applications per day platform-wide (100 by default).
   const perDay = page.getByLabel("Applications per day");
   await perDay.fill("500");
-  const agentForm = page.locator("form").nth(1);
+  const agentForm = page.locator("form").filter({ has: perDay });
   await agentForm.getByRole("button", { name: "Save changes" }).click();
   await expect(agentForm.getByText("Must be at most 100")).toBeVisible();
   await expect(perDay).toHaveAttribute("aria-invalid", "true");
